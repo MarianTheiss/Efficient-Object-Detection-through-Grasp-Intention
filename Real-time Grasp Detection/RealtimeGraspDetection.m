@@ -364,6 +364,8 @@ while true
         
             %all 0.22 seconds is a probability decision -> the probability before
             %and 0.5 seconds (5 after) should be +1 for grasp detected!
+            
+            %Check EMG6 (Moving Hand towards Object)
             if emg6Features(graspChecksPerformed,17) > normalizationVector(2)*1.5
                 for j=graspChecksPerformed:graspChecksPerformed+2
                     probabilities(j,2)=probabilities(j,2)+1;
@@ -373,6 +375,7 @@ while true
             end
             normalizationVector(2)=(normalizationVector(2)*9+emg6Features(graspChecksPerformed,17))/10;
 
+            %check EMG5 (Moving Hand towards Object)
             if emg5Features(graspChecksPerformed,17) > normalizationVector(3)*1.5
                 for j=graspChecksPerformed:graspChecksPerformed+2
                     probabilities(j,2)=probabilities(j,2)+1;
@@ -383,6 +386,8 @@ while true
             end
             normalizationVector(3)=(normalizationVector(3)*9+emg5Features(graspChecksPerformed,17))/10;
 
+            %check EMG4 (Closing Hand around Object and Moving Hand
+            %towards Object)
             if emg4Features(graspChecksPerformed,17) >normalizationVector(4)*1.5
                 for j=graspChecksPerformed:graspChecksPerformed+2
                     probabilities(j,2)=probabilities(j,2)+1;
@@ -392,6 +397,7 @@ while true
              end
             normalizationVector(4)=(normalizationVector(4)*9+emg4Features(graspChecksPerformed,17))/10;
 
+            %check EMG2 (Holding)
             if emg2Features(graspChecksPerformed,17) >normalizationVector(5)*1.5
                 probabilities(graspChecksPerformed,2)=probabilities(graspChecksPerformed,2)+1;
                 graspDetectionMatrix(graspChecksPerformed,5)=1;
@@ -399,8 +405,7 @@ while true
             end
             normalizationVector(5)=(normalizationVector(5)*9+emg2Features(graspChecksPerformed,17))/10;
 
-
-
+            %check EMG3 (Holding)
             if emg3Features(graspChecksPerformed,17) >normalizationVector(6)*1.5
                 probabilities(graspChecksPerformed,2)=probabilities(graspChecksPerformed,2)+1;
                 graspDetectionMatrix(graspChecksPerformed,6)=1;

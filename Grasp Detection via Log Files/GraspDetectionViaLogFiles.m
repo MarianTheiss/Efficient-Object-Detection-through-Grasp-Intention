@@ -2,14 +2,13 @@
 %%it reads in logfiles from the mYo logger also created while the Thesis
 %%and tries to detect the grasps
 %%Author: Marian Theiss
+%%How-To: Fill in Logfile name and timestamp, copy log files in directory
 
 clear all; close all; clc;
 
 %% setting filenames and flags
 
 %Enter Name of the logfile
-%name='einfache_bewegungen'
-%timestamp='5_28-12_19_54'
 name=''
 timestamp=''
 
@@ -18,7 +17,6 @@ filenameOrientation =  strcat(name, '-orient-', timestamp ,'.csv')
 filenameGyroscope =  strcat(name, '-gyro-', timestamp ,'.csv')
 filenameAcceleration =  strcat(name, '-accel-', timestamp ,'.csv')
 filenameActions =  strcat(name, '-actions-', timestamp ,'.csv')
-%filenameTestRange =  strcat(name, '-featurespacetest-', timestamp ,'.csv')
 
 %% building the Matrix
 
@@ -28,12 +26,9 @@ logAccel=importdata(filenameAcceleration,';');
 logOrient=importdata(filenameOrientation,';');
 logGyro=importdata(filenameGyroscope,';');
 logActions=importdata(filenameActions,';');
-%logTestRange=importdata(filenameTestRange,';');
-%logTestRange.data(:,:)=logTestRange.data(:,:)*1000+logAccel.data(1,1);
 
 %set the logfiledata to a 0 time
 mutualStartTime = max([logEmg.data(1,1), logOrient.data(1,1), logGyro.data(1,1), logAccel.data(1,1), logActions.data(1,1)]);
-%mutualStartTime= max([logEmg.data(1,1), logOrient.data(1,1), logGyro.data(1,1), logAccel.data(1,1)]);
 logEmg.data(:,1)=logEmg.data(:,1)-mutualStartTime;
 logAccel.data(:,1)=logAccel.data(:,1)-mutualStartTime;
 logOrient.data(:,1)=logOrient.data(:,1)-mutualStartTime;
@@ -85,17 +80,7 @@ else
     disp('Calculate EMG5 Features...')
     emg5Features.featuresOverTime=showFFTFeatures(1, 'Emg5', logEmg.data(:,1), [0 mutualEndTime], logEmg.data(:,6), windowSize, name, strcat(timestamp, 'slidingWindowTresholds'));
 end
-%check for EMG7 (grasp strongest and holding strong)
-% ->spectral Energy, cepstral1, expband doesnt matter, maybe energy best at
-% grasptime, also time possible
-%showFFTFeatures(rows, 'Emg7', logEmg.data(:,1), [0 mutualEndTime], logEmg.data(:,8), windowSize, name, strcat(timestamp, 'slidingWindowTresholds'))
-%check for EMG8 (grasp strongest and holding strong)
-% ->like emg7
-%showFFTFeatures(rows, 'Emg8', logEmg.data(:,1), [0 mutualEndTime], logEmg.data(:,9), windowSize, name, strcat(timestamp, 'slidingWindowTresholds'))
-%check for EMG1 (grasp strongest and holding strong)
-% ->like emg7
-%showFFTFeatures(rows, 'Emg1', logEmg.data(:,1), [0 mutualEndTime], logEmg.data(:,2), windowSize, name, strcat(timestamp, 'slidingWindowTresholds'))
-  
+
 %check for EMG4 (losing grasp)
 % -> Energy
 if exist(strcat(name,'-',timestamp,'slidingWindowTresholds\Emg4.mat'), 'file')~=0
@@ -163,33 +148,6 @@ walkDetectionMatrix=zeros(size(probabilities,1),5);
 walkDetectionMatrix(:,1)=probabilities(:,1);
 detectionTimestamps=zeros(size(probabilities,1),1);
 normalizationVector=zeros(1,size(graspDetectionMatrix,2));
-
-% figure('Name','Sliding Window Treshold Test Single Detections Spectral Energy')
-% subplot(5,1,1)
-% ylabel('Emg4 lose')
-% hold on; grid on;
-% plot(logEmg.data(:,1), logEmg.data(:,5))
-% plotEventMarker(logActions.data(:,1), max(abs(logEmg.data(:,5))), size(logActions.data,1))
-% subplot(5,1,2)
-% ylabel('Emg5 before and lose')
-% hold on; grid on;
-% plot(logEmg.data(:,1), logEmg.data(:,6))
-% plotEventMarker(logActions.data(:,1), max(abs(logEmg.data(:,6))), size(logActions.data,1))
-% subplot(5,1,3)
-% ylabel('Emg6 before')
-% hold on; grid on;
-% plot(logEmg.data(:,1), logEmg.data(:,7))
-% plotEventMarker(logActions.data(:,1), max(abs(logEmg.data(:,7))), size(logActions.data,1))
-% subplot(5,1,4)
-% ylabel('Emg2 holding')
-% hold on; grid on;
-% plot(logEmg.data(:,1), logEmg.data(:,3))
-% plotEventMarker(logActions.data(:,1), max(abs(logEmg.data(:,3))), size(logActions.data,1))
-% subplot(5,1,5)
-% ylabel('Emg3 holding')
-% hold on; grid on;
-% plot(logEmg.data(:,1), logEmg.data(:,4))
-% plotEventMarker(logActions.data(:,1), max(abs(logEmg.data(:,4))), size(logActions.data,1))
 
 
 %% get correlation of timestamps
@@ -300,20 +258,18 @@ end
 for i=2:size(emg6Features.featuresOverTime,1)-2
     %all 0.25 seconds is a probability decision -> the probability before
     %and 0.5 seconds (5 after) should be +1 for grasp detected!
-%     if emg6Features.featuresOverTime(i,17) > 800%1200
+    
+    %Check EMG6 (Moving Hand towards Object)
     if emg6Features.featuresOverTime(i,17) > normalizationVector(2)*1.5
         for j=i:i+2
             probabilities(emgToProbIndex(j),2)=probabilities(emgToProbIndex(j),2)+1;
             graspDetectionMatrix(emgToProbIndex(j),2)=1;
         end
         probabilities(emgToProbIndex(i),3)=probabilities(emgToProbIndex(i),3)+1;
-%         subplot(5,1,3)      
-%         stem(probabilities(emgToProbIndex(i),1), max(abs(logEmg.data(:,7))), 'g')
-%         stem(probabilities(emgToProbIndex(i),1), -max(abs(logEmg.data(:,7))), 'g')
     end
     normalizationVector(2)=(normalizationVector(2)*9+emg6Features.featuresOverTime(i,17))/10;
     
-%     if emg5Features.featuresOverTime(i,17) > 800%1700
+    %check EMG5 (Moving Hand towards Object)
      if emg5Features.featuresOverTime(i,17) > normalizationVector(3)*1.5
         for j=i:i+2
             probabilities(emgToProbIndex(j),2)=probabilities(emgToProbIndex(j),2)+1;
@@ -321,82 +277,36 @@ for i=2:size(emg6Features.featuresOverTime,1)-2
         end
         probabilities(emgToProbIndex(i),3)=probabilities(emgToProbIndex(i),3)+1;
         probabilities(emgToProbIndex(i),5)=probabilities(emgToProbIndex(i),5)+1;
-%         subplot(5,1,2)
-%         stem(probabilities(emgToProbIndex(i),1), max(abs(logEmg.data(:,6))), 'g')
-%         stem(probabilities(emgToProbIndex(i),1), -max(abs(logEmg.data(:,6))), 'g')
     end
     normalizationVector(3)=(normalizationVector(3)*9+emg5Features.featuresOverTime(i,17))/10;
     
-%     if emg4Features.featuresOverTime(i,17) >800% 1700
+    %check EMG4 (Closing Hand around Object and Moving Hand
+            %towards Object)
      if emg4Features.featuresOverTime(i,17) >normalizationVector(4)*1.5
         for j=i:i+2
             probabilities(emgToProbIndex(j),2)=probabilities(emgToProbIndex(j),2)+1;
             graspDetectionMatrix(emgToProbIndex(j),4)=1;
         end
         probabilities(emgToProbIndex(i),5)=probabilities(emgToProbIndex(i),5)+1;
-%         subplot(5,1,1)
-%         stem(probabilities(emgToProbIndex(i),1), max(abs(logEmg.data(:,5))), 'g')
-%         stem(probabilities(emgToProbIndex(i),1), -max(abs(logEmg.data(:,5))), 'g')
      end
      normalizationVector(4)=(normalizationVector(4)*9+emg4Features.featuresOverTime(i,17))/10;
      
-%     if emg2Features.featuresOverTime(i,17) >800% 1700
+     %check EMG2 (Holding)
     if emg2Features.featuresOverTime(i,17) >normalizationVector(5)*1.5
         probabilities(emgToProbIndex(i),2)=probabilities(emgToProbIndex(i),2)+1;
         graspDetectionMatrix(emgToProbIndex(i),5)=1;
         probabilities(emgToProbIndex(i),4)=probabilities(emgToProbIndex(i),4)+1;
-%         subplot(5,1,4)
-%         stem(probabilities(emgToProbIndex(i),1), max(abs(logEmg.data(:,3))), 'g')
-%         stem(probabilities(emgToProbIndex(i),1), -max(abs(logEmg.data(:,3))), 'g')
     end
     normalizationVector(5)=(normalizationVector(5)*9+emg2Features.featuresOverTime(i,17))/10;
     
-%     if emg3Features.featuresOverTime(i,17) >350% 400
+    %check EMG3 (Holding)
     if emg3Features.featuresOverTime(i,17) >normalizationVector(6)*1.5
         probabilities(emgToProbIndex(i),2)=probabilities(emgToProbIndex(i),2)+1;
         graspDetectionMatrix(emgToProbIndex(i),6)=1;
         probabilities(emgToProbIndex(i),4)=probabilities(emgToProbIndex(i),4)+1;
-%         subplot(5,1,5)
-%         stem(probabilities(emgToProbIndex(i),1), max(abs(logEmg.data(:,4))), 'g')
-%         stem(probabilities(emgToProbIndex(i),1), -max(abs(logEmg.data(:,4))), 'g')
     end
     normalizationVector(6)=(normalizationVector(6)*9+emg3Features.featuresOverTime(i,17))/10;
 end
-
-% hgsave(strcat(name, '-', timestamp, 'slidingWindowTresholds', '\slidingWindowTestSingleDetections'))
-
-% %Check Time domain Features
-% figure('Name','Sliding Window Treshold Test Single Detections Time Domain based')
-% subplot(6,1,1)
-% ylabel('Emg1 holding')
-% hold on; grid on;
-% plot(logEmg.data(:,1), logEmg.data(:,2))
-% plotEventMarker(logActions.data(:,1), max(abs(logEmg.data(:,2))), size(logActions.data,1))
-% subplot(6,1,2)
-% ylabel('Emg4 holding')
-% hold on; grid on;
-% plot(logEmg.data(:,1), logEmg.data(:,5))
-% plotEventMarker(logActions.data(:,1), max(abs(logEmg.data(:,5))), size(logActions.data,1))
-% subplot(6,1,3)
-% ylabel('Emg5 before and after')
-% hold on; grid on;
-% plot(logEmg.data(:,1), logEmg.data(:,6))
-% plotEventMarker(logActions.data(:,1), max(abs(logEmg.data(:,6))), size(logActions.data,1))
-% subplot(6,1,4)
-% ylabel('Emg6 before and after')
-% hold on; grid on;
-% plot(logEmg.data(:,1), logEmg.data(:,7))
-% plotEventMarker(logActions.data(:,1), max(abs(logEmg.data(:,7))), size(logActions.data,1))
-% subplot(6,1,5)
-% ylabel('Emg7 holding')
-% hold on; grid on;
-% plot(logEmg.data(:,1), logEmg.data(:,8))
-% plotEventMarker(logActions.data(:,1), max(abs(logEmg.data(:,8))), size(logActions.data,1))
-% subplot(6,1,6)
-% ylabel('Emg8 holding')
-% hold on; grid on;
-% plot(logEmg.data(:,1), logEmg.data(:,9))
-% plotEventMarker(logActions.data(:,1), max(abs(logEmg.data(:,9))), size(logActions.data,1))
 
 
 %% detect grasping with EMG in time domain
@@ -430,34 +340,22 @@ for i=2:size(probabilities,1)-3
     
     %check for grasping
     %check for EMG1(holding)
-    %avg magnitude in timedomain >10
-%     if mean(absEmgData(pToEmgIndex(i):pToEmgIndex(i+1),2)) >5
     if max(absEmgData(pToEmgIndex(i):pToEmgIndex(i+1),2)) > normalizationVector(7)*1.5  
         probabilities(i,2)=probabilities(i,2)+1;
         graspDetectionMatrix(i,7)=1;
         probabilities(i,4)=probabilities(i,4)+1;
-%         subplot(6,1,1)      
-%         stem(probabilities(i,1), max(abs(logEmg.data(:,2))), 'g')
-%         stem(probabilities(i,1), -max(abs(logEmg.data(:,2))), 'g')
     end
     normalizationVector(7)=max(absEmgData(pToEmgIndex(i):pToEmgIndex(i+1),2));
 
     %check for EMG4 (holding)
-    %avg magnitude in timedomain >10
-%     if mean(absEmgData(pToEmgIndex(i):pToEmgIndex(i+1),5)) >10
     if mean(absEmgData(pToEmgIndex(i):pToEmgIndex(i+1),5)) >normalizationVector(8)*1.5
         probabilities(i,2)=probabilities(i,2)+1;
         graspDetectionMatrix(i,8)=1;
         probabilities(i,4)=probabilities(i,4)+1;
-%         subplot(6,1,2)      
-%         stem(probabilities(i,1), max(abs(logEmg.data(:,5))), 'g')
-%         stem(probabilities(i,1), -max(abs(logEmg.data(:,5))), 'g')
     end
     normalizationVector(8)=(normalizationVector(8)*9+mean(absEmgData(pToEmgIndex(i):pToEmgIndex(i+1),5)))/10;  
     
     %check for EMG5 (before and lose)
-    %avg magnitude in timedomain >10
-%     if mean(absEmgData(pToEmgIndex(i):pToEmgIndex(i+1),6)) >10
     if mean(absEmgData(pToEmgIndex(i):pToEmgIndex(i+1),6)) >normalizationVector(9)*1.5
         for j=i:i+2
             probabilities(j,2)=probabilities(j,2)+1;
@@ -465,15 +363,10 @@ for i=2:size(probabilities,1)-3
         end
         probabilities(i,3)=probabilities(i,3)+1;
         probabilities(i,5)=probabilities(i,5)+1;
-%         subplot(6,1,3)      
-%         stem(probabilities(i,1), max(abs(logEmg.data(:,6))), 'g')
-%         stem(probabilities(i,1), -max(abs(logEmg.data(:,6))), 'g')
     end
     normalizationVector(9)=(normalizationVector(9)*9+mean(absEmgData(pToEmgIndex(i):pToEmgIndex(i+1),6)))/10;
 
     %check for EMG 6 (before and lose)
-    %avg magnitude in timedomain >15
-%     if mean(absEmgData(pToEmgIndex(i):pToEmgIndex(i+1),7)) >15
     if mean(absEmgData(pToEmgIndex(i):pToEmgIndex(i+1),7)) >normalizationVector(10)*1.5
         for j=i:i+2
             probabilities(j,2)=probabilities(j,2)+1;
@@ -481,35 +374,22 @@ for i=2:size(probabilities,1)-3
         end
         probabilities(i,3)=probabilities(i,3)+1;
         probabilities(i,5)=probabilities(i,5)+1;
-%         subplot(6,1,4)      
-%         stem(probabilities(i,1), max(abs(logEmg.data(:,7))), 'g')
-%         stem(probabilities(i,1), -max(abs(logEmg.data(:,7))), 'g')
     end
     normalizationVector(10)=(normalizationVector(10)*9+mean(absEmgData(pToEmgIndex(i):pToEmgIndex(i+1),7)))/10;
 
     %check for EMG7 (holding)
-    %avg magnitude in timedomain >10
-%     if mean(absEmgData(pToEmgIndex(i):pToEmgIndex(i+1),8)) >10
     if mean(absEmgData(pToEmgIndex(i):pToEmgIndex(i+1),8)) > normalizationVector(11)*1.5
         probabilities(i,2)=probabilities(i,2)+1;
         graspDetectionMatrix(i,11)=1;
         probabilities(i,4)=probabilities(i,4)+1;
-%         subplot(6,1,5)      
-%         stem(probabilities(i,1), max(abs(logEmg.data(:,8))), 'g')
-%         stem(probabilities(i,1), -max(abs(logEmg.data(:,8))), 'g')
     end
     normalizationVector(11)=(normalizationVector(11)*9+mean(absEmgData(pToEmgIndex(i):pToEmgIndex(i+1),8)))/10;
 
     %check for EMG8 (holding)
-    %avg magnitude in timedomain > 5
-%     if mean(absEmgData(pToEmgIndex(i):pToEmgIndex(i+1),9)) >5
     if mean(absEmgData(pToEmgIndex(i):pToEmgIndex(i+1),9)) > normalizationVector(12)*1.5
         probabilities(i,2)=probabilities(i,2)+1;
         graspDetectionMatrix(i,12)=1;
         probabilities(i,4)=probabilities(i,4)+1;
-%         subplot(6,1,6)      
-%         stem(probabilities(i,1), max(abs(logEmg.data(:,9))), 'g')
-%         stem(probabilities(i,1), -max(abs(logEmg.data(:,9))), 'g')
     end
     normalizationVector(12)=(normalizationVector(12)*9+mean(absEmgData(pToEmgIndex(i):pToEmgIndex(i+1),9)))/10;
 end
@@ -518,54 +398,6 @@ end
 
 
 %% Evaluation
-% figure('Name','Sliding Window Treshold Test Before Grasp')
-% subplot(3,1,1)
-% ylabel('Emg5')
-% hold on; grid on;
-% plot(logEmg.data(:,1), logEmg.data(:,6))
-% plotEventMarker(logActions.data(:,1), max(abs(logEmg.data(:,6))), size(logActions.data,1))
-% subplot(3,1,2)
-% ylabel('Emg6')
-% hold on; grid on;
-% plot(logEmg.data(:,1), logEmg.data(:,7))
-% plotEventMarker(logActions.data(:,1), max(abs(logEmg.data(:,7))), size(logActions.data,1))
-% 
-% for i=1:size(probabilities,1)
-%     if probabilities(i,3)>=2
-%         subplot(3,1,1)
-%         stem(probabilities(emgToProbIndex(i),1), max(abs(logEmg.data(:,6))), 'g')
-%         stem(probabilities(emgToProbIndex(i),1), -max(abs(logEmg.data(:,6))), 'g')
-%         subplot(3,1,2)
-%         stem(probabilities(emgToProbIndex(i),1), max(abs(logEmg.data(:,7))), 'g')
-%         stem(probabilities(emgToProbIndex(i),1), -max(abs(logEmg.data(:,7))), 'g')
-%     end
-% end
-% hgsave(strcat(name, '-', timestamp, 'slidingWindowTresholds', '\slidingWindowTestBeforeGrasp'))
-% 
-% figure('Name','Sliding Window Treshold Test lose Grasp')
-% subplot(3,1,1)
-% ylabel('Emg4')
-% hold on; grid on;
-% plot(logEmg.data(:,1), logEmg.data(:,5))
-% plotEventMarker(logActions.data(:,1), max(abs(logEmg.data(:,5))), size(logActions.data,1))
-% subplot(3,1,2)
-% ylabel('Emg5')
-% hold on; grid on;
-% plot(logEmg.data(:,1), logEmg.data(:,6))
-% plotEventMarker(logActions.data(:,1), max(abs(logEmg.data(:,6))), size(logActions.data,1))
-% 
-% for i=1:size(probabilities,1)
-%     if probabilities(i,3)>=2
-%         subplot(3,1,1)
-%         stem(probabilities(emgToProbIndex(i),1), max(abs(logEmg.data(:,5))), 'g')
-%         stem(probabilities(emgToProbIndex(i),1), -max(abs(logEmg.data(:,5))), 'g')
-%         subplot(3,1,2)
-%         stem(probabilities(emgToProbIndex(i),1), max(abs(logEmg.data(:,6))), 'g')
-%         stem(probabilities(emgToProbIndex(i),1), -max(abs(logEmg.data(:,6))), 'g')
-%     end
-% end
-% hgsave(strcat(name, '-', timestamp, 'slidingWindowTresholds', '\slidingWindowTestLoseGrasp'))
-
 Detections(:,1)=graspDetectionMatrix(:,1);
 Detections(:,2)=sum(graspDetectionMatrix(:,2:end),2);
 Detections=Detections(Detections(:,2)>=9,:);
@@ -585,52 +417,9 @@ for i=1:size(graspDetectionMatrix,1)
     if sum(graspDetectionMatrix(i,2:end))>=9 %Not all Features have to be detected!!!
         for j=1:8
             subplot(8,1,j)
-            stem(graspDetectionMatrix(i,1), 200, 'g')%max(abs(logEmg.data(:,j+1)))
-            stem(graspDetectionMatrix(i,1), -200, 'g')%-max(abs(logEmg.data(:,j+1)))
+            stem(graspDetectionMatrix(i,1), 200, 'g')
+            stem(graspDetectionMatrix(i,1), -200, 'g')
         end
     end
 end
 hgsave(strcat(name, '-', timestamp, 'slidingWindowTresholds', '\slidingWindowTestGraspDetected'))
-
-% %Plot the detected walks, accel data and action bars
-% figure('Name','Sliding Window Treshold Test Walk Detected')
-% for i=1:3
-%     subplot(3,1,i)
-%     ylabel(strcat('Accel', num2str(i)))
-%     hold on; grid on;
-%     plot(logAccel.data(:,1), logAccel.data(:,i+1))
-%     plotEventMarker(logActions.data(:,1), max(abs(logAccel.data(:,i+1))), size(logActions.data,1))
-% end
-% 
-% for i=1:size(walkDetectionMatrix,1)
-%     if sum(walkDetectionMatrix(i,2:end))==0
-%         for j=1:3
-%             subplot(3,1,j)
-%             stem(walkDetectionMatrix(i,1), max(abs(logAccel.data(:,j+1))), 'g')
-%             stem(walkDetectionMatrix(i,1), -max(abs(logAccel.data(:,j+1))), 'g')
-%         end
-%     end
-% end
-% hgsave(strcat(name, '-', timestamp, 'slidingWindowTresholds', '\slidingWindowTestWalkDetected'))
-% 
-% %Plot the detected rests, accel data and action bars
-% figure('Name','Sliding Window Treshold Test Rest Detected')
-% for i=1:3
-%     subplot(3,1,i)
-%     ylabel(strcat('Accel', num2str(i)))
-%     hold on; grid on;
-%     plot(logAccel.data(:,1), logAccel.data(:,i+1))
-%     plotEventMarker(logActions.data(:,1), max(abs(logAccel.data(:,i+1))), size(logActions.data,1))
-% end
-% 
-% for i=1:size(restDetectionMatrix,1)
-%     if sum(restDetectionMatrix(i,2:end))==0
-%         for j=1:3
-%             subplot(3,1,j)
-%             stem(restDetectionMatrix(i,1), max(abs(logAccel.data(:,j+1))), 'g')
-%             stem(restDetectionMatrix(i,1), -max(abs(logAccel.data(:,j+1))), 'g')
-%         end
-%     end
-% end
-% hgsave(strcat(name, '-', timestamp, 'slidingWindowTresholds', '\slidingWindowTestRestDetected'))
-%%
